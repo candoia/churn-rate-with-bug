@@ -1,0 +1,42 @@
+churn: output top(40) of string weight int;
+totalbugs : output sum of int;
+p: Project = input;
+isfixing := false;
+bugfix := false;
+issues: set of string;
+
+isBugFixing := function(logging: string, issueRecord: set of string): bool{
+    lst := getAsArray(issueRecord);
+    foreach(i: int; def(lst[i])){
+        if(strfind(lst[i], logging) > -1){
+            return true;
+        }
+    }
+    return false;
+};
+
+visit(p, visitor {
+    before node: Issue -> {
+          totalbugs << 1;
+          add(issues, node.number);
+        }
+});
+
+visit(p, visitor {
+	before node: Revision -> {
+        comment := node.log;
+        isfixing = isfixingrevision(comment);
+        if(isfixing){
+          bugfix= isBugFixing(comment, issues);
+        }
+    }
+	before node: ChangedFile -> {
+       if(bugfix){
+         churn << node.name weight 1;
+       }
+	}
+  after node: Revision -> {
+    isfixing = false;
+    bugfix = false;
+  }
+});
